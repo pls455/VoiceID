@@ -22,6 +22,7 @@ jobs:
           mkdir -p /tmp/voiceid-preserve
           cp pubspec.yaml /tmp/voiceid-preserve/
           cp -r lib /tmp/voiceid-preserve/lib
+          cp -r assets /tmp/voiceid-preserve/assets 2>/dev/null || true
           cp -r android/app/src/main/cpp /tmp/voiceid-preserve/cpp
           cp android/app/src/main/AndroidManifest.xml /tmp/voiceid-preserve/AndroidManifest.xml
 
@@ -33,9 +34,28 @@ jobs:
           cp /tmp/voiceid-preserve/pubspec.yaml pubspec.yaml
           rm -rf lib
           cp -r /tmp/voiceid-preserve/lib lib
+          rm -rf assets
+          mkdir -p assets/models
+          cp -r /tmp/voiceid-preserve/assets/. assets/ 2>/dev/null || true
           rm -rf android/app/src/main/cpp
           cp -r /tmp/voiceid-preserve/cpp android/app/src/main/cpp
           cp /tmp/voiceid-preserve/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+
+      - name: Fetch offline speaker model
+        run: |
+          mkdir -p assets/models
+          curl -L --fail --retry 3 "https://huggingface.co/marksverdhei/Qwen3-Voice-Embedding-12Hz-0.6B-onnx/resolve/main/speaker_encoder_int8.onnx?download=true" -o assets/models/speaker_encoder_int8.onnx
+
+      - name: Enable ONNX Runtime
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          s = p.read_text()
+          if "onnxruntime-android" not in s:
+              s = s.replace("dependencies {", 'dependencies {\n    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")')
+          p.write_text(s)
+          PY
 
       - name: Enable native CMake
         run: |
