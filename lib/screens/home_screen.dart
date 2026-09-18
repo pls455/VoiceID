@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'live_recognition_screen.dart';
+import 'add_person_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -28,7 +29,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddPersonScreen())),
               icon: const Icon(Icons.person_add),
               label: const Padding(
                 padding: EdgeInsets.all(14),
