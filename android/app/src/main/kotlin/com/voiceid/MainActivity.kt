@@ -18,6 +18,10 @@ class MainActivity : FlutterActivity() {
     private val running = AtomicBoolean(false)
     private var level = 0.0
 
+    private external fun nativePushPcm(samples: ShortArray, count: Int): Int
+
+    companion object { init { System.loadLibrary("voiceid_native") } }
+
     override fun configureFlutterEngine(binding: io.flutter.embedding.engine.FlutterEngine) {
         super.configureFlutterEngine(binding)
         MethodChannel(binding.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, result ->
@@ -55,6 +59,7 @@ class MainActivity : FlutterActivity() {
                         val x = buffer[i].toDouble() / 32768.0
                         sum += x * x
                     }
+                    nativePushPcm(buffer, n)
                     level = sqrt(sum / n).coerceIn(0.0, 1.0)
                 }
             }
