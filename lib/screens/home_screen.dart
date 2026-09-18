@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'live_recognition_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,7 +19,7 @@ class HomeScreen extends StatelessWidget {
             const Text('التعرف محليًا باستخدام Speaker Embeddings'),
             const SizedBox(height: 28),
             FilledButton.icon(
-              onPressed: () {},
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LiveRecognitionScreen())),
               icon: const Icon(Icons.mic),
               label: const Padding(
                 padding: EdgeInsets.all(14),
