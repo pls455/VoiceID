@@ -2,4 +2,11 @@ cmake_minimum_required(VERSION 3.22.1)
 project(voiceid_native)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_library(voiceid_native SHARED native_bridge.cpp audio/audio_engine.cpp audio/audio_analyzer.cpp audio/ring_buffer.cpp)
+add_library(voiceid_native SHARED
+  native_bridge.cpp
+  audio/audio_engine.cpp
+  audio/audio_analyzer.cpp
+  audio/ring_buffer.cpp
+  embeddings/speaker_embedding.cpp
+  recognition/recognition_engine.cpp
+)
