@@ -24,6 +24,7 @@ jobs:
           cp -r lib /tmp/voiceid-preserve/lib
           cp -r assets /tmp/voiceid-preserve/assets 2>/dev/null || true
           cp -r android/app/src/main/cpp /tmp/voiceid-preserve/cpp
+          cp -r android/app/src/main/kotlin /tmp/voiceid-preserve/kotlin 2>/dev/null || true
           cp android/app/src/main/AndroidManifest.xml /tmp/voiceid-preserve/AndroidManifest.xml
 
       - name: Generate Android project scaffolding
@@ -37,8 +38,12 @@ jobs:
           rm -rf assets
           mkdir -p assets/models
           cp -r /tmp/voiceid-preserve/assets/. assets/ 2>/dev/null || true
+          mkdir -p android/app/src/main/assets/models
+          cp assets/models/speaker_encoder_int8.onnx android/app/src/main/assets/models/speaker_encoder_int8.onnx
           rm -rf android/app/src/main/cpp
           cp -r /tmp/voiceid-preserve/cpp android/app/src/main/cpp
+          rm -rf android/app/src/main/kotlin
+          cp -r /tmp/voiceid-preserve/kotlin android/app/src/main/kotlin 2>/dev/null || true
           cp /tmp/voiceid-preserve/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
 
       - name: Fetch offline speaker model
