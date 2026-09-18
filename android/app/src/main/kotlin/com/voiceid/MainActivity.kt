@@ -17,10 +17,16 @@ class MainActivity : FlutterActivity() {
     private var thread: Thread? = null
     private val running = AtomicBoolean(false)
     private var level = 0.0
+    private val pcmLock = Any()
+    private val capturedPcm = ArrayList<Short>()
+    private val maxSamples = 5 * 16000
+    private var embeddingEngine: SpeakerEmbeddingEngine? = null
 
     private external fun nativePushPcm(samples: ShortArray, count: Int): Int
 
-    companion object { init { System.loadLibrary("voiceid_native") } }
+    companion object {
+        init { System.loadLibrary("voiceid_native") }
+    }
 
     override fun configureFlutterEngine(binding: io.flutter.embedding.engine.FlutterEngine) {
         super.configureFlutterEngine(binding)
@@ -37,16 +43,49 @@ class MainActivity : FlutterActivity() {
                 }
                 "stop" -> { stopAudio(); result.success(true) }
                 "level" -> result.success(level)
+                "embedCurrent" -> {
+                    try {
+                        val pcm = synchronized(pcmLock) { capturedPcm.toShortArray() }
+                        if (pcm.size < 16000) {
+                            result.error("AUDIO_TOO_SHORT", "Record at least 1 second of speech", null)
+                        } else {
+                            val vector = getEmbeddingEngine().embed(pcm)
+                            result.success(vector.map { it.toDouble() })
+                        }
+                    } catch (e: Exception) {
+                        result.error("EMBEDDING_ERROR", e.message ?: "Embedding inference failed", null)
+                    }
+                }
+                "modelReady" -> {
+                    try {
+                        getEmbeddingEngine()
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
     }
 
+    private fun getEmbeddingEngine(): SpeakerEmbeddingEngine {
+        return embeddingEngine ?: SpeakerEmbeddingEngine(this).also { embeddingEngine = it }
+    }
+
     private fun startAudio() {
         if (running.get()) return
+        synchronized(pcmLock) { capturedPcm.clear() }
         val sampleRate = 16000
         val min = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        recorder = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, min * 2)
+        if (min <= 0) throw IllegalStateException("AudioRecord buffer unavailable")
+        recorder = AudioRecord(
+            MediaRecorder.AudioSource.VOICE_RECOGNITION,
+            sampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            min * 2
+        )
         recorder?.startRecording()
         running.set(true)
         thread = Thread {
@@ -60,6 +99,15 @@ class MainActivity : FlutterActivity() {
                         sum += x * x
                     }
                     nativePushPcm(buffer, n)
+                    synchronized(pcmLock) {
+                        for (i in 0 until n) {
+                            capturedPcm.add(buffer[i])
+                        }
+                        if (capturedPcm.size > maxSamples) {
+                            val removeCount = capturedPcm.size - maxSamples
+                            capturedPcm.subList(0, removeCount).clear()
+                        }
+                    }
                     level = sqrt(sum / n).coerceIn(0.0, 1.0)
                 }
             }
@@ -68,8 +116,8 @@ class MainActivity : FlutterActivity() {
 
     private fun stopAudio() {
         running.set(false)
-        try { thread?.join(300) } catch (_: InterruptedException) {}
-        recorder?.stop()
+        try { thread?.join(500) } catch (_: InterruptedException) {}
+        try { recorder?.stop() } catch (_: Exception) {}
         recorder?.release()
         recorder = null
         thread = null
@@ -78,6 +126,8 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         stopAudio()
+        embeddingEngine?.close()
+        embeddingEngine = null
         super.onDestroy()
     }
 }
