@@ -76,11 +76,12 @@ jobs:
 
       - name: Verify generated project
         run: |
-          test -f android/app/src/main/kotlin/com/voiceid/MainActivity.kt
-          test -f android/app/src/main/cpp/CMakeLists.txt
-          test -f android/app/src/main/assets/models/speaker_encoder_int8.onnx
-          grep -q "onnxruntime-android" android/app/build.gradle.kts
-          grep -q "externalNativeBuild" android/app/build.gradle.kts
+          test -s android/app/src/main/kotlin/com/voiceid/MainActivity.kt
+          test -s android/app/src/main/cpp/CMakeLists.txt
+          test -s android/app/src/main/assets/models/speaker_encoder_int8.onnx
+          grep -F "onnxruntime-android" android/app/build.gradle.kts
+          grep -F "externalNativeBuild" android/app/build.gradle.kts
+          echo "VoiceID Android sources and model are present."
 
       - name: Dependencies
         run: flutter pub get
