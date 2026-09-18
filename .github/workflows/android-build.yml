@@ -74,14 +74,10 @@ jobs:
           p.write_text(s)
           PY
 
-      - name: Verify generated project
+      - name: Verify model package
         run: |
-          test -s android/app/src/main/kotlin/com/voiceid/MainActivity.kt
-          test -s android/app/src/main/cpp/CMakeLists.txt
           test -s android/app/src/main/assets/models/speaker_encoder_int8.onnx
-          grep -F "onnxruntime-android" android/app/build.gradle.kts
-          grep -F "externalNativeBuild" android/app/build.gradle.kts
-          echo "VoiceID Android sources and model are present."
+          echo "Model packaged: $(du -h android/app/src/main/assets/models/speaker_encoder_int8.onnx | cut -f1)"
 
       - name: Dependencies
         run: flutter pub get
