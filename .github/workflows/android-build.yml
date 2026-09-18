@@ -51,14 +51,19 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path("android/app/build.gradle.kts")
           s = p.read_text()
-          if "onnxruntime-android" not in s:
-              s = s.replace(
-                  "dependencies {",
-                  'dependencies {\n    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")'
-              )
-          p.write_text(s)
+          dep = '    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")'
+          if "com.microsoft.onnxruntime:onnxruntime-android" not in s:
+              s, n = re.subn(r'(?m)^dependencies\\s*\\{', lambda m: m.group(0) + "\\n" + dep, s, count=1)
+              if n != 1:
+                  raise SystemExit("Could not locate app dependencies block in android/app/build.gradle.kts")
+              p.write_text(s)
+          verify = p.read_text()
+          if "com.microsoft.onnxruntime:onnxruntime-android:1.22.0" not in verify:
+              raise SystemExit("ONNX Runtime dependency was not inserted")
+          print("ONNX Runtime dependency enabled")
           PY
 
       - name: Enable native CMake
