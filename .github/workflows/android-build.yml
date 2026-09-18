@@ -1,0 +1,65 @@
+name: Android Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.0'
+          channel: stable
+          cache: true
+
+      - name: Preserve project files
+        run: |
+          mkdir -p /tmp/voiceid-preserve
+          cp pubspec.yaml /tmp/voiceid-preserve/
+          cp -r lib /tmp/voiceid-preserve/lib
+          cp -r android/app/src/main/cpp /tmp/voiceid-preserve/cpp
+          cp android/app/src/main/AndroidManifest.xml /tmp/voiceid-preserve/AndroidManifest.xml
+
+      - name: Generate Android project scaffolding
+        run: flutter create . --platforms=android --project-name voiceid --org com.voiceid --overwrite
+
+      - name: Restore VoiceID sources
+        run: |
+          cp /tmp/voiceid-preserve/pubspec.yaml pubspec.yaml
+          rm -rf lib
+          cp -r /tmp/voiceid-preserve/lib lib
+          rm -rf android/app/src/main/cpp
+          cp -r /tmp/voiceid-preserve/cpp android/app/src/main/cpp
+          cp /tmp/voiceid-preserve/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+
+      - name: Enable native CMake
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          if p.exists():
+              s = p.read_text()
+              if "externalNativeBuild" not in s:
+                  s = s.replace("android {", 'android {\n    externalNativeBuild {\n        cmake { path = file("src/main/cpp/CMakeLists.txt") }\n    }')
+                  p.write_text(s)
+          PY
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Build APK
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: voiceid-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
