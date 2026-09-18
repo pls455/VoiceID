@@ -17,14 +17,13 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Preserve project files
+      - name: Preserve VoiceID sources
         run: |
           mkdir -p /tmp/voiceid-preserve
           cp pubspec.yaml /tmp/voiceid-preserve/
           cp -r lib /tmp/voiceid-preserve/lib
-          cp -r assets /tmp/voiceid-preserve/assets 2>/dev/null || true
           cp -r android/app/src/main/cpp /tmp/voiceid-preserve/cpp
-          cp -r android/app/src/main/kotlin /tmp/voiceid-preserve/kotlin 2>/dev/null || true
+          cp -r android/app/src/main/kotlin /tmp/voiceid-preserve/kotlin
           cp android/app/src/main/AndroidManifest.xml /tmp/voiceid-preserve/AndroidManifest.xml
 
       - name: Generate Android project scaffolding
@@ -35,21 +34,17 @@ jobs:
           cp /tmp/voiceid-preserve/pubspec.yaml pubspec.yaml
           rm -rf lib
           cp -r /tmp/voiceid-preserve/lib lib
-          rm -rf assets
-          mkdir -p assets/models
-          cp -r /tmp/voiceid-preserve/assets/. assets/ 2>/dev/null || true
-          mkdir -p android/app/src/main/assets/models
-          cp assets/models/speaker_encoder_int8.onnx android/app/src/main/assets/models/speaker_encoder_int8.onnx
           rm -rf android/app/src/main/cpp
           cp -r /tmp/voiceid-preserve/cpp android/app/src/main/cpp
           rm -rf android/app/src/main/kotlin
-          cp -r /tmp/voiceid-preserve/kotlin android/app/src/main/kotlin 2>/dev/null || true
+          cp -r /tmp/voiceid-preserve/kotlin android/app/src/main/kotlin
           cp /tmp/voiceid-preserve/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
 
       - name: Fetch offline speaker model
         run: |
-          mkdir -p assets/models
-          curl -L --fail --retry 3 "https://huggingface.co/marksverdhei/Qwen3-Voice-Embedding-12Hz-0.6B-onnx/resolve/main/speaker_encoder_int8.onnx?download=true" -o assets/models/speaker_encoder_int8.onnx
+          mkdir -p android/app/src/main/assets/models
+          curl -L --fail --retry 3 --retry-delay 2             "https://huggingface.co/marksverdhei/Qwen3-Voice-Embedding-12Hz-0.6B-onnx/resolve/main/speaker_encoder_int8.onnx?download=true"             -o android/app/src/main/assets/models/speaker_encoder_int8.onnx
+          test -s android/app/src/main/assets/models/speaker_encoder_int8.onnx
 
       - name: Enable ONNX Runtime
         run: |
@@ -58,7 +53,10 @@ jobs:
           p = Path("android/app/build.gradle.kts")
           s = p.read_text()
           if "onnxruntime-android" not in s:
-              s = s.replace("dependencies {", 'dependencies {\n    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")')
+              s = s.replace(
+                  "dependencies {",
+                  'dependencies {\n    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")'
+              )
           p.write_text(s)
           PY
 
@@ -67,12 +65,22 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           p = Path("android/app/build.gradle.kts")
-          if p.exists():
-              s = p.read_text()
-              if "externalNativeBuild" not in s:
-                  s = s.replace("android {", 'android {\n    externalNativeBuild {\n        cmake { path = file("src/main/cpp/CMakeLists.txt") }\n    }')
-                  p.write_text(s)
+          s = p.read_text()
+          if "externalNativeBuild" not in s:
+              s = s.replace(
+                  "android {",
+                  'android {\n    externalNativeBuild {\n        cmake { path = file("src/main/cpp/CMakeLists.txt") }\n    }'
+              )
+          p.write_text(s)
           PY
+
+      - name: Verify generated project
+        run: |
+          test -f android/app/src/main/kotlin/com/voiceid/MainActivity.kt
+          test -f android/app/src/main/cpp/CMakeLists.txt
+          test -f android/app/src/main/assets/models/speaker_encoder_int8.onnx
+          grep -q "onnxruntime-android" android/app/build.gradle.kts
+          grep -q "externalNativeBuild" android/app/build.gradle.kts
 
       - name: Dependencies
         run: flutter pub get
