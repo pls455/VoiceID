@@ -51,20 +51,19 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           p = Path("android/app/build.gradle.kts")
           s = p.read_text()
           dep = '    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")'
           if "com.microsoft.onnxruntime:onnxruntime-android" not in s:
-              s, n = re.subn(r'(?m)^dependencies\\s*\\{', lambda m: m.group(0) + "\\n" + dep, s, count=1)
-              if n != 1:
+              marker = "dependencies {"
+              if marker not in s:
                   raise SystemExit("Could not locate app dependencies block in android/app/build.gradle.kts")
+              s = s.replace(marker, marker + "\n" + dep, 1)
               p.write_text(s)
           verify = p.read_text()
           if "com.microsoft.onnxruntime:onnxruntime-android:1.22.0" not in verify:
               raise SystemExit("ONNX Runtime dependency was not inserted")
           print("ONNX Runtime dependency enabled")
-          PY
 
       - name: Enable native CMake
         run: |
@@ -73,11 +72,16 @@ jobs:
           p = Path("android/app/build.gradle.kts")
           s = p.read_text()
           if "externalNativeBuild" not in s:
+              marker = "android {"
+              if marker not in s:
+                  raise SystemExit("Could not locate android block in android/app/build.gradle.kts")
               s = s.replace(
-                  "android {",
-                  'android {\n    externalNativeBuild {\n        cmake { path = file("src/main/cpp/CMakeLists.txt") }\n    }'
+                  marker,
+                  'android {\n    externalNativeBuild {\n        cmake { path = file("src/main/cpp/CMakeLists.txt") }\n    }',
+                  1
               )
-          p.write_text(s)
+              p.write_text(s)
+          print("CMake configuration enabled")
           PY
 
       - name: Verify model package
