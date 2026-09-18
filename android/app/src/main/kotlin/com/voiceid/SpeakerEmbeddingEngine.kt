@@ -4,13 +4,12 @@ import android.content.Context
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
-import java.nio.FloatBuffer
 
 class SpeakerEmbeddingEngine(context: Context) : AutoCloseable {
     private val environment = OrtEnvironment.getEnvironment()
     private val session: OrtSession
     init {
-        val model = context.assets.open("models/speaker_encoder_int8.onnx").use { it.readBytes() }
+        val model = context.assets.open("flutter_assets/assets/models/speaker_encoder_int8.onnx").use { it.readBytes() }
         session = environment.createSession(model)
     }
 
