@@ -9,4 +9,5 @@ add_library(voiceid_native SHARED
   audio/ring_buffer.cpp
   embeddings/speaker_embedding.cpp
   recognition/recognition_engine.cpp
+  recognition/recognition_registry.cpp
 )
