@@ -27,7 +27,7 @@ jobs:
           cp android/app/src/main/AndroidManifest.xml /tmp/voiceid-preserve/AndroidManifest.xml
 
       - name: Generate Android project scaffolding
-        run: flutter create . --platforms=android --project-name voiceid --org com.voiceid --overwrite
+        run: flutter create . --platforms=android --project-name voiceid --org com --overwrite
 
       - name: Restore VoiceID sources
         run: |
