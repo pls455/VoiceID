@@ -39,11 +39,12 @@ jobs:
           rm -rf android/app/src/main/kotlin
           cp -r /tmp/voiceid-preserve/kotlin android/app/src/main/kotlin
           cp /tmp/voiceid-preserve/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          rm -rf test
 
       - name: Fetch offline speaker model
         run: |
           mkdir -p android/app/src/main/assets/models
-          curl -L --fail --retry 3 --retry-delay 2             "https://huggingface.co/marksverdhei/Qwen3-Voice-Embedding-12Hz-0.6B-onnx/resolve/main/speaker_encoder_int8.onnx?download=true"             -o android/app/src/main/assets/models/speaker_encoder_int8.onnx
+          curl -L --fail --retry 3 --retry-delay 2 "https://huggingface.co/marksverdhei/Qwen3-Voice-Embedding-12Hz-0.6B-onnx/resolve/main/speaker_encoder_int8.onnx?download=true" -o android/app/src/main/assets/models/speaker_encoder_int8.onnx
           test -s android/app/src/main/assets/models/speaker_encoder_int8.onnx
 
       - name: Enable ONNX Runtime
