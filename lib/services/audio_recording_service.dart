@@ -1,21 +1,23 @@
-import '../ffi/audio_engine_ffi.dart';
+import 'package:flutter/services.dart';
 
 class AudioRecordingService {
-  final AudioEngineFfi engine;
-  AudioRecordingService({AudioEngineFfi? engine}) : engine = engine ?? AudioEngineFfi();
+  static const _channel = MethodChannel('voiceid/audio');
   bool _recording = false;
+
   bool get isRecording => _recording;
 
   Future<void> start() async {
-    final result = engine.start();
-    if (result != 0) throw StateError('Native audio engine failed: $result');
+    await _channel.invokeMethod('start');
     _recording = true;
   }
 
   Future<void> stop() async {
-    engine.stop();
+    await _channel.invokeMethod('stop');
     _recording = false;
   }
 
-  double get level => engine.level;
+  Future<double> getLevel() async {
+    final value = await _channel.invokeMethod<num>('level');
+    return value?.toDouble() ?? 0.0;
+  }
 }
