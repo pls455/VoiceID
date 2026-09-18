@@ -32,7 +32,9 @@ class RecognitionFfi {
     final idPtr = id.toNativeUtf8();
     final embPtr = calloc<ffi.Float>(embedding.length);
     try {
-      for (var i = 0; i < embedding.length; i++) embPtr[i] = embedding[i];
+      for (var i = 0; i < embedding.length; i++) {
+        embPtr[i] = embedding[i];
+      }
       return _add(idPtr, embPtr, embedding.length) != 0;
     } finally {
       calloc.free(idPtr);
@@ -45,11 +47,19 @@ class RecognitionFfi {
     double threshold = 0.55,
   }) {
     final embPtr = calloc<ffi.Float>(embedding.length);
-    final outPtr = calloc<Utf8>(256);
+    final outPtr = calloc<ffi.Uint8>(256);
     try {
-      for (var i = 0; i < embedding.length; i++) embPtr[i] = embedding[i];
-      final similarity = _recognize(embPtr, embedding.length, threshold, outPtr, 256);
-      final id = outPtr.toDartString();
+      for (var i = 0; i < embedding.length; i++) {
+        embPtr[i] = embedding[i];
+      }
+      final similarity = _recognize(
+        embPtr,
+        embedding.length,
+        threshold,
+        outPtr.cast<Utf8>(),
+        256,
+      );
+      final id = outPtr.cast<Utf8>().toDartString();
       return (id: id, similarity: similarity, known: id.isNotEmpty);
     } finally {
       calloc.free(embPtr);
